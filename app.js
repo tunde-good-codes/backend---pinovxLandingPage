@@ -93,13 +93,17 @@ app.use(errorHandler);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static frontend in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// if (process.env.NODE_ENV === 'production') {
+//   app.use(express.static(path.join(__dirname, '../frontend/dist')));
   
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-  });
-}
+//   app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+//   });
+// }
+
+app.set('trust proxy', 1);
+
+
 
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'healthy' });
