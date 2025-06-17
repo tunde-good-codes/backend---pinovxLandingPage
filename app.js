@@ -29,11 +29,15 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Enable CORS
+// Enable CORS
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173', // For local development
+    'https://frontend-pinovxlandingpage.onrender.com' // Your live frontend
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // if you want to allow cookies/auth headers
+  credentials: true,
 }));
 
 
@@ -55,6 +59,10 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
+
+
+
+
 
 // Initialize Passport
 require('./config/passport');
@@ -83,5 +91,18 @@ app.use(errorHandler);
 
 // Static assets (React build)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve static frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  });
+}
+
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
 
 module.exports = app;
