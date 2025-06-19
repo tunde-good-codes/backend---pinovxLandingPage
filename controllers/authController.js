@@ -56,146 +56,67 @@ const notifyAdmins = async (subject, message, userData = null) => {
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-// exports.register = async (req, res, next) => {
-//   try {
-//     const { firstName, lastName, email, password } = req.body;
-//     // Check if user already exists
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser) {
-//       return next(new ErrorResponse("Email already registered", 400));
-//     }
-//     // Generate verification token
-//     const verificationToken = generateVerificationToken();
-//     const verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
-//     const user = await User.create({
-//       firstName,
-//       lastName,
-//       email,
-//       password,
-//       role: email === process.env.ADMIN_EMAIL ? "admin" : "user" || "user",
-//       verificationToken,
-//       verificationTokenExpire,
-//       isVerified: false,
-//     });
-
-//     // Send verification email
-//     const verificationUrl = `${req.protocol}://${req.get(
-//       "host"
-//     )}/api/auth/verify-email/${verificationToken}`;
-//     await sendVerificationEmail(user, verificationUrl);
-
-//     res.status(201).json({
-//       success: true,
-//       message:
-//         "Registration successful. Please check your email to verify your account.",
-//       data: {
-//         _id: user._id,
-//         email: user.email,
-//       },
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
-
 exports.register = async (req, res, next) => {
   try {
     const { firstName, lastName, email, password } = req.body;
-    
+    console.log(req.body);
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return next(new ErrorResponse("Email already registered", 400));
     }
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const verificationTokenExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
     const user = await User.create({
       firstName,
       lastName,
       email,
       password,
-      role: email === process.env.ADMIN_EMAIL ? "admin" : "user",
+      role: email === process.env.ADMIN_EMAIL ? "admin" : "user" || "user",
+      verificationToken,
+      verificationTokenExpire,
       isVerified: false,
-      kyc: {
-        status: "not_started",
-        verificationToken: {
-          token: crypto.randomBytes(32).toString('hex'),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          tokenType: "STANDARD"
-        }
-      }
     });
 
-    const verificationUrl = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${user.kyc.verificationToken.token}`;
+    // Send verification email
+    const verificationUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/api/auth/verify-email/${verificationToken}`;
     await sendVerificationEmail(user, verificationUrl);
 
-    // Enhanced response
     res.status(201).json({
       success: true,
-      requiresVerification: true,
-      message: "Registration successful! Please check your email for verification.",
+      message:
+        "Registration successful. Please check your email to verify your account.",
       data: {
         _id: user._id,
         email: user.email,
-        role: user.role
-      }
+      },
     });
-    
   } catch (err) {
     next(err);
   }
 };
+
 // @desc    Verify email
 // @route   GET /api/auth/verify-email/:token
 // @access  Public
-// exports.verifyEmail = async (req, res, next) => {
-//   try {
-//     const user = await User.findOne({
-//       verificationToken: req.params.token,
-//       verificationTokenExpire: { $gt: Date.now() },
-//     });
-
-//     if (!user) {
-//       return next(new ErrorResponse("Invalid or expired token", 400));
-//     }
-
-//     user.isVerified = true;
-//     user.verificationToken = undefined;
-//     user.verificationTokenExpire = undefined;
-//     await user.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Email verified successfully. You can now login.",
-//       data: {
-//         email: user.email,
-//       },
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
-
 exports.verifyEmail = async (req, res, next) => {
   try {
-    // Correct query to match your schema structure
     const user = await User.findOne({
-      'kyc.verificationToken.token': req.params.token,
-      'kyc.verificationToken.expiresAt': { $gt: Date.now() },
-      'kyc.verificationToken.used': false
+      verificationToken: req.params.token,
+      verificationTokenExpire: { $gt: Date.now() },
     });
 
     if (!user) {
       return next(new ErrorResponse("Invalid or expired token", 400));
     }
 
-    // Update user verification status
     user.isVerified = true;
-    user.kyc.verificationToken.used = true;
-    user.kyc.verificationToken.usedAt = Date.now();
-    
-    // Optional: Update KYC status if needed
-    user.kyc.status = 'verified'; 
-    
+    user.verificationToken = undefined;
+    user.verificationTokenExpire = undefined;
     await user.save();
 
     res.status(200).json({
@@ -203,14 +124,13 @@ exports.verifyEmail = async (req, res, next) => {
       message: "Email verified successfully. You can now login.",
       data: {
         email: user.email,
-        isVerified: user.isVerified
-      }
+      },
     });
-
   } catch (err) {
     next(err);
   }
 };
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public

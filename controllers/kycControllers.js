@@ -95,29 +95,20 @@ async function handleApplicantReviewed(event) {
     console.log(`✅ Found user: ${user._id} (${user.email}) for applicantId: ${applicantId}`);
 
     // Prepare comprehensive update data
-    // const updateData = {
-    //   'kyc.status': review.reviewAnswer === 'GREEN' ? 'verified' : 'rejected',
-    //   'kyc.lastVerifiedAt': new Date(),
-    //   'kyc.review': {
-    //     status: 'completed',
-    //     result: review.reviewAnswer,
-    //     rejectType: review.reviewRejectType || null,
-    //     rejectLabels: review.reviewRejectLabels || [],
-    //     comment: review.reviewComment || review.moderationComment || null,
-    //     reviewedAt: new Date(review.reviewDate || Date.now()),
-    //     reviewerId: review.reviewerId || 'system'
-    //   }
-    // };
- const updateData = {
-    'kyc.status': review.reviewAnswer === 'GREEN' ? 'verified' : 'rejected',
-    'kyc.review': { // Ensure this structure always exists
-      result: review.reviewAnswer,
-      status: 'completed',
-      reviewedAt: new Date(),
-      reviewerId: review.reviewerId || 'system'
-    },
-    'kyc.frontendReview.reviewAnswer': review.reviewAnswer // Mirror value
-  };
+    const updateData = {
+      'kyc.status': review.reviewAnswer === 'GREEN' ? 'verified' : 'rejected',
+      'kyc.lastVerifiedAt': new Date(),
+      'kyc.review': {
+        status: 'completed',
+        result: review.reviewAnswer,
+        rejectType: review.reviewRejectType || null,
+        rejectLabels: review.reviewRejectLabels || [],
+        comment: review.reviewComment || review.moderationComment || null,
+        reviewedAt: new Date(review.reviewDate || Date.now()),
+        reviewerId: review.reviewerId || 'system'
+      }
+    };
+
     // Add metadata if applicant data is available
     if (applicant) {
       updateData['kyc.metadata'] = {
@@ -769,24 +760,29 @@ exports.getMyDashboardData =async (req, res, next) => {
       isVerified: user.isVerified,
       accountCreated: user.createdAt
     },
-   
-   kyc: {
-  status: user.kyc?.status || 'not_started',
-  levelName: user.kyc?.frontendReview?.levelName || 
-            user.kyc?.greenVerification?.levelName || 
-            null,
-  attempts: user.kyc?.attempts || 0,
-  lastUpdated: user.kyc?.lastUpdatedAt || null,
-  verificationStatus: user.isKYCVerified ? 'verified' : 'pending',
-  review: user.kyc?.frontendReview ? {
-    status: user.kyc.frontendReview.reviewStatus,
-    result: user.kyc.frontendReview.reviewAnswer,
-    date: user.kyc.frontendReview.reviewDate
-  } : null,
-  token: user.kyc?.verificationToken ? {
-    // ... keep existing token logic ...
-  } : null
-},
+    kyc: {
+      status: user.kyc?.status || 'not_started',
+      levelName: user.kyc?.frontendReview.levelName,
+      attempts: user.kyc?.attempts || 0,
+      lastUpdated: user.kyc?.lastUpdatedAt,
+      // Simplified verification status for dashboard
+      verificationStatus: user.isKYCVerified ? 'verified' : 'pending',
+      // Frontend review status
+      review: user.kyc?.frontendReview ? {
+        status: user.kyc.frontendReview.reviewStatus,
+        result: user.kyc.frontendReview.reviewAnswer,
+        date: user.kyc.frontendReview.reviewDate
+      } : null,
+      // Token information (if exists)
+      token: user.kyc?.verificationToken ? {
+        token: user.kyc.verificationToken.token,
+        type: user.kyc.verificationToken.tokenType,
+        expires: user.kyc.verificationToken.expiresAt,
+        isActive: !user.kyc.verificationToken.used && 
+                 user.kyc.verificationToken.expiresAt > new Date()
+      } : null
+    },
+    // Add any other dashboard metrics here
     metrics: {
       // Example metrics - customize based on your application
       completedActions: 0, // Replace with actual metrics

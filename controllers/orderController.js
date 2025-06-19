@@ -4,56 +4,35 @@ const { generateOrderOTP, verifyOrderOTP } = require("../utils/otpService");
 const { sendEmail, emailTemplates } = require("../utils/sendEmail");
 
 // Verify KYC middleware
-// exports.verifyKYC = async (req, res, next) => {
-//   try {
-//     console.log(req.body)
-//     console.log(req.user)
-//     const user = await User.findById(req.user.id);
-
-//     // Check if user exists and KYC status is 'verified'
-//     if (
-//       !user ||
-//       !user.kyc ||
-//       user.kyc.status !== 'verified' ||
-//       !(
-//         user.kyc.review?.result === 'GREEN' ||
-//         user.kyc.frontendReview?.reviewAnswer === 'GREEN'
-//       )
-//     ) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "KYC verification required to access this feature",
-//       });
-//     }
-
-//     next();
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
 exports.verifyKYC = async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-  
-  const isVerified = user?.kyc?.status === 'verified' && 
-    (user.kyc.review?.result === 'GREEN' ||
-     user.kyc.frontendReview?.reviewAnswer === 'GREEN' ||
-     user.kyc.verificationToken?.used === true); // Added condition
+  try {
+    console.log(req.body)
+    console.log(req.user)
+    const user = await User.findById(req.user.id);
 
-  if (!isVerified) {
-    return res.status(403).json({
-      success: false,
-      message: "KYC verification required",
-      details: {
-        status: user?.kyc?.status,
-        hasReview: !!user?.kyc?.review,
-        hasFrontendReview: !!user?.kyc?.frontendReview,
-        tokenUsed: user?.kyc?.verificationToken?.used
-      }
-    });
+    // Check if user exists and KYC status is 'verified'
+    if (
+      !user ||
+      !user.kyc ||
+      user.kyc.status !== 'verified' ||
+      !(
+        user.kyc.review?.result === 'GREEN' ||
+        user.kyc.frontendReview?.reviewAnswer === 'GREEN'
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "KYC verification required to access this feature",
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-  next();
 };
+
 // Create new order
 exports.createOrder = async (req, res) => {
   try {
